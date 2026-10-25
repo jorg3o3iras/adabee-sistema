@@ -1,8 +1,9 @@
 # ============================================================
 # SERVICES/EVALBEE.PY — Motor de detecção fiducial + template
 # ⚠️ CORRIGIDO: detecta scanner vs foto
-# ✨ NOVO: calibração automática por HoughCircles (resolve scan "espichado")
+# ✨ NOVO: calibração automática por HoughCircles
 # ✨ NOVO: debug visual via base64 (funciona no Render)
+# 🔧 AJUSTE: limiar foto 0.30→0.22 (imagens comprimidas com ratios baixos)
 # ============================================================
 
 import cv2
@@ -22,15 +23,7 @@ from collections import defaultdict
 from core.db import get_db_connection
 
 
-# ═══════════════════════════════════════════════════════════════════
-# DETECÇÃO DE TIPO (scanner vs foto)
-# ═══════════════════════════════════════════════════════════════════
 def detectar_tipo_entrada(gray):
-    """
-    Detecta se a imagem veio de scanner de mesa ou foto de celular.
-    Scanner: fundo branco uniforme (255), desvio padrão baixo.
-    Foto: iluminação variável, sombras, desvio padrão alto.
-    """
     try:
         brilho_medio = float(np.mean(gray))
         h, w = gray.shape[:2]
@@ -56,9 +49,6 @@ def detectar_tipo_entrada(gray):
         return 'foto'
 
 
-# ═══════════════════════════════════════════════════════════════════
-# MARCADORES FIDUCIAIS
-# ═══════════════════════════════════════════════════════════════════
 def detectar_marcadores_fiduciais_v4(gray):
     try:
         h, w = gray.shape
@@ -180,9 +170,6 @@ def corrigir_perspectiva(img, marcadores):
         return img
 
 
-# ═══════════════════════════════════════════════════════════════════
-# TEMPLATE MATEMÁTICO (fallback)
-# ═══════════════════════════════════════════════════════════════════
 def gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas):
     mapa = []
 
@@ -320,25 +307,16 @@ def carregar_mapa_template(prova_id, aluno_id):
         return None
 
 
-# ═══════════════════════════════════════════════════════════════════
-# ✨ DEBUG VISUAL — retorna base64 (funciona no Render)
-# ═══════════════════════════════════════════════════════════════════
 def salvar_debug_overlay(img_corrigida, mapa_template, pasta_saida='debug'):
-    """
-    Gera imagem de debug com template (AMARELO) vs bolhas reais (VERDE).
-    Retorna base64 (funciona no Render) e tenta salvar arquivo local.
-    """
     try:
         h, w = img_corrigida.shape[:2]
         debug_img = img_corrigida.copy()
 
-        # 1. Desenha posições teóricas (AMARELO)
         for b in mapa_template:
             cx = int(b['x'] * w)
             cy = int(b['y'] * h)
             cv2.circle(debug_img, (cx, cy), 6, (0, 255, 255), 1)
 
-        # 2. Detecta bolhas reais via HoughCircles (VERDE)
         gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
         gray_blur = cv2.GaussianBlur(gray, (5, 5), 1)
         min_r = int(min(w, h) * 0.010)
@@ -359,7 +337,6 @@ def salvar_debug_overlay(img_corrigida, mapa_template, pasta_saida='debug'):
             for (x, y, r) in circulos:
                 cv2.circle(debug_img, (x, y), r, (0, 255, 0), 2)
 
-        # 3. Tenta salvar em arquivo (silencioso se falhar no Render)
         try:
             os.makedirs(pasta_saida, exist_ok=True)
             ts = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -371,7 +348,6 @@ def salvar_debug_overlay(img_corrigida, mapa_template, pasta_saida='debug'):
 
         logging.info(f"🐛 Debug: {len(mapa_template)} posições (AMARELO) | {n_detectadas} bolhas reais (VERDE)")
 
-        # 4. Retorna base64 (funciona no Render)
         _, buffer = cv2.imencode('.jpg', debug_img, [cv2.IMWRITE_JPEG_QUALITY, 80])
         b64 = base64.b64encode(buffer).decode('utf-8')
         return f"data:image/jpeg;base64,{b64}"
@@ -381,14 +357,7 @@ def salvar_debug_overlay(img_corrigida, mapa_template, pasta_saida='debug'):
         return None
 
 
-# ═══════════════════════════════════════════════════════════════════
-# ✨ CALIBRAÇÃO — reconstrói o template alinhado com bolhas reais
-# ═══════════════════════════════════════════════════════════════════
 def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num_colunas):
-    """
-    Detecta as bolhas REAIS na imagem e reconstrói o template alinhado.
-    Retorna None se não conseguir calibrar (fallback para template padrão).
-    """
     try:
         h, w = img_corrigida.shape[:2]
         gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
@@ -505,7 +474,7 @@ def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num
 
 
 # ═══════════════════════════════════════════════════════════════════
-# CORREÇÃO POR TEMPLATE
+# 🔧 CORREÇÃO PRINCIPAL — limiar foto ajustado para 0.22
 # ═══════════════════════════════════════════════════════════════════
 def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas, debug=False):
     try:
@@ -515,6 +484,7 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
         logging.info(f"📷 Tipo de imagem: {tipo.upper()} ({w}x{h})")
 
         if tipo == 'scanner':
+            # Scanner limpo (300 DPI+): Otsu, ratios altos (0.6-0.9)
             _, binaria = cv2.threshold(
                 gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
             )
@@ -523,6 +493,8 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
             limiar_confirma = 0.55
             relative_multi = 0.70
         else:
+            # 🔧 FOTO (inclui JPEG comprimido / celular / scan baixa res)
+            # Ratios típicos: 0.22-0.32 nas marcadas, 0.14-0.20 nas vazias
             binaria = cv2.adaptiveThreshold(
                 gray, 255,
                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -530,9 +502,9 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
                 25, 12
             )
             radius_factor = 0.018
-            limiar_min = 0.30
-            limiar_confirma = 0.45
-            relative_multi = 0.60
+            limiar_min = 0.22          # ← era 0.30 (não pegava as respostas)
+            limiar_confirma = 0.30     # ← era 0.45 (não confirmava nada)
+            relative_multi = 0.85      # ← era 0.60 (filtra ruído melhor)
 
         por_questao = defaultdict(list)
         for b in mapa_template:
@@ -599,11 +571,12 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
             sorted_r = sorted(ratios, reverse=True)
             separacao = (sorted_r[0] - sorted_r[1]) if len(sorted_r) > 1 else 1.0
 
-            if max_ratio > limiar_confirma and separacao > 0.25:
+            # Confiança adaptada para ratios baixos (foto comprimida)
+            if max_ratio >= 0.30 and separacao >= 0.10:
                 conf = 96
-            elif max_ratio > 0.35 and separacao > 0.15:
+            elif max_ratio >= 0.25 and separacao >= 0.04:
                 conf = 82
-            elif separacao > 0.08:
+            elif max_ratio >= 0.21:
                 conf = 68
             else:
                 conf = 50
@@ -671,9 +644,6 @@ def preparar_imagem_para_template(imagem_base64):
         return None, False
 
 
-# ═══════════════════════════════════════════════════════════════════
-# FLUXO PRINCIPAL (com calibração + debug base64)
-# ═══════════════════════════════════════════════════════════════════
 def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                    tipo_questoes=4, disciplina='', bncc=None,
                                    mapa_template=None, prova_id=None, aluno_id=None):
@@ -681,24 +651,19 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     alternativas = padrao_gabarito['alternativas']
     num_colunas = 1 if total_questoes <= 12 else 2
 
-    # 1. Carrega template do banco (se tiver)
     if not mapa_template and prova_id and aluno_id:
         mapa_template = carregar_mapa_template(prova_id, aluno_id)
 
-    # 2. Se não tem, gera padrão matemático
     if not mapa_template:
         mapa_template = gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas)
 
-    # 3. Prepara imagem
     img_corr, ok = preparar_imagem_para_template(imagem_base64)
     if not ok:
         return None
 
-    # 4. Debug ANTES da calibração
     debug_b64_antes = salvar_debug_overlay(img_corr, mapa_template, pasta_saida='debug')
     debug_b64_depois = None
 
-    # 5. Calibração: só para SCANNER
     gray_cal = cv2.cvtColor(img_corr, cv2.COLOR_BGR2GRAY)
     tipo = detectar_tipo_entrada(gray_cal)
 
@@ -711,7 +676,6 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
         if template_calibrado:
             logging.info(f"✅ Usando template CALIBRADO ({len(template_calibrado)} bolhas)")
             mapa_template = template_calibrado
-            # Debug DEPOIS da calibração
             debug_b64_depois = salvar_debug_overlay(img_corr, template_calibrado, pasta_saida='debug')
 
             if prova_id and aluno_id:
@@ -727,7 +691,6 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     else:
         logging.info("📷 Foto detectada — usando template salvo/padrão (sem calibração)")
 
-    # 6. Corrige com o template final
     respostas, confiancas = corrigir_por_template_evalbee_v2(
         img_corr, mapa_template, alternativas
     )
@@ -745,9 +708,6 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     }
 
 
-# ═══════════════════════════════════════════════════════════════════
-# QR CODE
-# ═══════════════════════════════════════════════════════════════════
 def extrair_dados_qrcode(imagem_base64):
     try:
         from pyzbar.pyzbar import decode
