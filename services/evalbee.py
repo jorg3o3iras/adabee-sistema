@@ -476,15 +476,25 @@ def calibrar_template_por_hough(img_corrigida, total_questoes, alternativas, num
 # ═══════════════════════════════════════════════════════════════════
 # 🔧 CORREÇÃO PRINCIPAL — limiar foto ajustado para 0.22
 # ═══════════════════════════════════════════════════════════════════
-def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas, debug=False):
+def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
+                                      modo=None, debug=False):
+    """
+    Se `modo` for 'foto' ou 'scanner', força o pipeline correspondente.
+    Se `modo` for None/'auto', detecta automaticamente.
+    """
     try:
         h, w = img_corrigida.shape[:2]
         gray = cv2.cvtColor(img_corrigida, cv2.COLOR_BGR2GRAY)
-        tipo = detectar_tipo_entrada(gray)
-        logging.info(f"📷 Tipo de imagem: {tipo.upper()} ({w}x{h})")
+
+        if modo in ('foto', 'scanner'):
+            tipo = modo
+            logging.info(f"📷 Pipeline FORÇADO: {tipo.upper()} ({w}x{h})")
+        else:
+            tipo = detectar_tipo_entrada(gray)
+            logging.info(f"📷 Pipeline AUTO: {tipo.upper()} ({w}x{h})")
 
         if tipo == 'scanner':
-            # Scanner limpo (300 DPI+): Otsu, ratios altos (0.6-0.9)
+            # Otsu — imagem limpa, ratios altos
             _, binaria = cv2.threshold(
                 gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
             )
@@ -493,8 +503,7 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
             limiar_confirma = 0.55
             relative_multi = 0.70
         else:
-            # 🔧 FOTO (inclui JPEG comprimido / celular / scan baixa res)
-            # Ratios típicos: 0.22-0.32 nas marcadas, 0.14-0.20 nas vazias
+            # Adaptive — foto/sombra/compressão, ratios baixos
             binaria = cv2.adaptiveThreshold(
                 gray, 255,
                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -502,9 +511,9 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
                 25, 12
             )
             radius_factor = 0.018
-            limiar_min = 0.22          # ← era 0.30 (não pegava as respostas)
-            limiar_confirma = 0.30     # ← era 0.45 (não confirmava nada)
-            relative_multi = 0.85      # ← era 0.60 (filtra ruído melhor)
+            limiar_min = 0.22
+            limiar_confirma = 0.30
+            relative_multi = 0.85
 
         por_questao = defaultdict(list)
         for b in mapa_template:
@@ -571,15 +580,24 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
             sorted_r = sorted(ratios, reverse=True)
             separacao = (sorted_r[0] - sorted_r[1]) if len(sorted_r) > 1 else 1.0
 
-            # Confiança adaptada para ratios baixos (foto comprimida)
-            if max_ratio >= 0.30 and separacao >= 0.10:
-                conf = 96
-            elif max_ratio >= 0.25 and separacao >= 0.04:
-                conf = 82
-            elif max_ratio >= 0.21:
-                conf = 68
+            if tipo == 'scanner':
+                if max_ratio > limiar_confirma and separacao > 0.25:
+                    conf = 96
+                elif max_ratio > 0.35 and separacao > 0.15:
+                    conf = 82
+                elif separacao > 0.08:
+                    conf = 68
+                else:
+                    conf = 50
             else:
-                conf = 50
+                if max_ratio >= 0.30 and separacao >= 0.10:
+                    conf = 96
+                elif max_ratio >= 0.25 and separacao >= 0.04:
+                    conf = 82
+                elif max_ratio >= 0.21:
+                    conf = 68
+                else:
+                    conf = 50
             confiancas.append(conf)
 
         if debug or logging.getLogger().level <= logging.INFO:
@@ -596,7 +614,8 @@ def corrigir_por_template_evalbee_v2(img_corrigida, mapa_template, alternativas,
         return [], []
 
 
-def preparar_imagem_para_template(imagem_base64):
+def preparar_imagem_para_template(imagem_base64, modo=None):
+    """Prepara imagem. Se `modo` for passado, força o tipo (foto/scanner)."""
     try:
         raw = imagem_base64
         if isinstance(raw, tuple):
@@ -619,7 +638,12 @@ def preparar_imagem_para_template(imagem_base64):
             return None, False
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        tipo = detectar_tipo_entrada(gray)
+
+        # Modo efetivo: forçado pelo usuário OU auto-detectado
+        if modo in ('foto', 'scanner'):
+            tipo = modo
+        else:
+            tipo = detectar_tipo_entrada(gray)
 
         marcadores = detectar_marcadores_fiduciais_v4(gray)
         if not marcadores:
@@ -636,7 +660,7 @@ def preparar_imagem_para_template(imagem_base64):
                                   interpolation=cv2.INTER_AREA)
 
         logging.info(f"✅ Template: {tipo} {img_corr.shape[1]}x{img_corr.shape[0]} "
-                     f"(TARGET_H={TARGET_H})")
+                     f"(TARGET_H={TARGET_H}, modo={'FORÇADO' if modo in ('foto','scanner') else 'AUTO'})")
         return img_corr, True
 
     except Exception as e:
@@ -646,7 +670,14 @@ def preparar_imagem_para_template(imagem_base64):
 
 def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, serie,
                                    tipo_questoes=4, disciplina='', bncc=None,
-                                   mapa_template=None, prova_id=None, aluno_id=None):
+                                   mapa_template=None, prova_id=None, aluno_id=None,
+                                   modo='foto'):
+    """
+    modo: 'foto' (padrão) | 'scanner' | 'auto'
+      - 'foto'    → NUNCA calibra, adaptive threshold, limiar 0.22
+      - 'scanner' → SEMPRE calibra (Hough), Otsu, limiar 0.40
+      - 'auto'    → detecta automaticamente (compatibilidade)
+    """
     total_questoes = padrao_gabarito['total_questoes']
     alternativas = padrao_gabarito['alternativas']
     num_colunas = 1 if total_questoes <= 12 else 2
@@ -657,27 +688,32 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     if not mapa_template:
         mapa_template = gerar_mapa_template_padrao(total_questoes, alternativas, num_colunas)
 
-    img_corr, ok = preparar_imagem_para_template(imagem_base64)
+    img_corr, ok = preparar_imagem_para_template(imagem_base64, modo=modo)
     if not ok:
         return None
 
+    # Debug ANTES
     debug_b64_antes = salvar_debug_overlay(img_corr, mapa_template, pasta_saida='debug')
     debug_b64_depois = None
 
-    gray_cal = cv2.cvtColor(img_corr, cv2.COLOR_BGR2GRAY)
-    tipo = detectar_tipo_entrada(gray_cal)
+    # Modo efetivo
+    if modo in ('foto', 'scanner'):
+        tipo = modo
+        logging.info(f"🖨️ MODO FORÇADO: {tipo.upper()}")
+    else:
+        gray_cal = cv2.cvtColor(img_corr, cv2.COLOR_BGR2GRAY)
+        tipo = detectar_tipo_entrada(gray_cal)
+        logging.info(f"📷 MODO AUTO — detectado: {tipo.upper()}")
 
     if tipo == 'scanner':
-        logging.info("🔧 Scanner detectado — tentando calibrar template por HoughCircles...")
+        logging.info("🔧 Calibrando template por HoughCircles (modo scanner)...")
         template_calibrado = calibrar_template_por_hough(
             img_corr, total_questoes, alternativas, num_colunas
         )
-
         if template_calibrado:
-            logging.info(f"✅ Usando template CALIBRADO ({len(template_calibrado)} bolhas)")
+            logging.info(f"✅ Template CALIBRADO ({len(template_calibrado)} bolhas)")
             mapa_template = template_calibrado
             debug_b64_depois = salvar_debug_overlay(img_corr, template_calibrado, pasta_saida='debug')
-
             if prova_id and aluno_id:
                 try:
                     salvar_mapa_template(
@@ -689,10 +725,10 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
         else:
             logging.warning("⚠️ Calibração falhou — usando template matemático padrão")
     else:
-        logging.info("📷 Foto detectada — usando template salvo/padrão (sem calibração)")
+        logging.info("📱 Modo foto — sem calibração (usa template salvo/padrão)")
 
     respostas, confiancas = corrigir_por_template_evalbee_v2(
-        img_corr, mapa_template, alternativas
+        img_corr, mapa_template, alternativas, modo=tipo
     )
 
     if not respostas:
@@ -701,7 +737,7 @@ def corrigir_com_template_mapping(imagem_base64, padrao_gabarito, aluno_nome, se
     return {
         'respostas': respostas,
         'confiancas': confiancas if confiancas else [70] * len(respostas),
-        'metodo': 'evalbee_v4',
+        'metodo': f'evalbee_v4_{tipo}',
         'debug_antes': debug_b64_antes,
         'debug_depois': debug_b64_depois,
         'tipo_entrada': tipo
