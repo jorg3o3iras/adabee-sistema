@@ -1,6 +1,7 @@
 # ============================================================
 # ROUTES/CORRECAO.PY — Correção IA, lote, manual, produção, QR
 # Provas GLOBAIS — valida apenas a escola do ALUNO
+# ⚠️ CORRIGIDO: status 'MÚLTIPLA MARCAÇÃO' na correção manual
 # ============================================================
 
 import hashlib
@@ -37,7 +38,7 @@ def _validar_aluno_prova_escola(cur, aluno_id, prova_id, escola_sessao):
                a.turma_id,
                a.escola_id AS aluno_escola_id,
                t.serie AS turma_serie,
-               t.nome  AS turma_nome,              -- ✅ CORRIGIDO: adicionado aqui
+               t.nome  AS turma_nome,
                e.nome AS escola_nome
         FROM provas p
         LEFT JOIN alunos a ON a.id = %s
@@ -48,7 +49,6 @@ def _validar_aluno_prova_escola(cur, aluno_id, prova_id, escola_sessao):
     dados = cur.fetchone()
     if not dados:
         return False, None, 'Prova não encontrada', 404
-    # ⚠️ Só valida a escola DO ALUNO (prova é global)
     if escola_sessao is not None and dados.get('aluno_escola_id') != escola_sessao:
         return False, None, 'Acesso negado a este aluno', 403
     return True, dados, None, 200
@@ -223,18 +223,33 @@ def corrigir_manual():
         serie = dados.get('turma_serie') or serie_prova or '1º Ano'
         tipo_avaliacao = identificar_disciplina(prova_titulo, disciplina, serie)
 
+        # ⚠️ CORRIGIDO: detecta e reporta MÚLTIPLA MARCAÇÃO explicitamente
         questoes_status = []
         for i in range(total):
             resp = str(respostas[i]) if i < len(respostas) and respostas[i] is not None else ''
             gab = str(gabarito[i]) if i < len(gabarito) and gabarito[i] is not None else ''
-            is_correto = bool(resp and gab and resp.upper() == gab.upper())
+            is_multipla = (resp.upper() == 'MULTIPLA')
+            is_correto = bool(resp and gab and not is_multipla and resp.upper() == gab.upper())
             codigo_bncc = bncc_gabarito[i] if i < len(bncc_gabarito) and bncc_gabarito[i] else ''
-            status_msg = ('ADQUIRIU HABILIDADE' if is_correto
-                          else ('RECOMPOSIÇÃO DE APRENDIZAGEM' if resp else 'NÃO RESPONDEU'))
+
+            if is_correto:
+                status_msg = 'ADQUIRIU HABILIDADE'
+                status_texto = f'✅ ACERTOU: {status_msg}'
+            elif is_multipla:
+                status_msg = 'MÚLTIPLA MARCAÇÃO'
+                status_texto = '⚠️ MÚLTIPLA MARCAÇÃO: mais de uma bolha preenchida'
+            elif resp:
+                status_msg = 'RECOMPOSIÇÃO DE APRENDIZAGEM'
+                status_texto = f'❌ ERROU: {status_msg}'
+            else:
+                status_msg = 'NÃO RESPONDEU'
+                status_texto = '— NÃO RESPONDEU'
+
             questoes_status.append({
                 'numero': i + 1, 'resposta': resp or '—', 'gabarito': gab or '—',
-                'acertou': is_correto, 'status': status_msg,
-                'status_texto': f"{'✅ ACERTOU' if is_correto else '❌ ERROU'}: {status_msg}",
+                'acertou': is_correto, 'respondida': bool(resp),
+                'multipla': is_multipla,
+                'status': status_msg, 'status_texto': status_texto,
                 'bncc': codigo_bncc
             })
 
@@ -447,7 +462,7 @@ def corrigir_automatico():
             disciplina = prova.get('disciplina', '')
             prova_titulo = prova.get('titulo', '')
             escola_nome_banco = prova.get('escola_nome', '')
-            turma_nome_banco = prova.get('turma_nome', '')  # ✅ agora vem preenchido
+            turma_nome_banco = prova.get('turma_nome', '')
             cur.close(); conn.close()
         except Exception as e:
             logging.error(f"❌ Erro ao buscar dados: {e}")
@@ -516,7 +531,7 @@ def corrigir_automatico():
         resultado['prova_id'] = prova_id
         resultado['prova_titulo'] = prova_titulo
         resultado['escola_nome'] = escola_nome_banco
-        resultado['turma_nome'] = turma_nome_banco          # ✅ agora preenchido
+        resultado['turma_nome'] = turma_nome_banco
         resultado['tipo_avaliacao'] = tipo_avaliacao
         resultado['disciplina'] = disciplina
         resultado['bncc'] = bncc_gabarito
