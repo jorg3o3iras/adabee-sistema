@@ -234,7 +234,7 @@ function processarArq(input) {
 // ═══════════════════════════════════════════════════════════════════
 // CORREÇÃO COM IA
 // ═══════════════════════════════════════════════════════════════════
-async function processarComIA(imagemBase64) {
+async function processarComIA(imagemBase64, modo = 'foto') {
     window._ultimaImagemCorrigida = imagemBase64;
 
     const escolaId = document.getElementById('corrigir-escola')?.value;
@@ -248,15 +248,16 @@ async function processarComIA(imagemBase64) {
         showToast('❌ Nenhuma imagem foi fornecida!', 'error'); return;
     }
 
+    const modoLabel = modo === 'scanner' ? '🖨️ Scanner' : '📱 Foto';
     const etapas = [
         { nome: '📸 Preparando imagem', descricao: 'Processando a imagem do cartão resposta...' },
         { nome: '🎯 Template + Marcadores', descricao: 'Detectando marcadores e aplicando template...' },
-        { nome: '🔍 Validação OpenCV', descricao: 'Cruzando com HoughCircles...' },
+        { nome: '🔍 Validação OpenCV', descricao: 'Analisando as bolhas...' },
         { nome: '🤖 IA (se necessário)', descricao: 'Analisando casos difíceis com OpenAI...' },
         { nome: '📊 Processando resultados', descricao: 'Comparando com o gabarito e calculando nota...' },
         { nome: '💾 Finalizando', descricao: 'Salvando os resultados...' }
     ];
-    progressManager.iniciar('🤖 Corrigindo com IA', etapas, '🤖');
+    progressManager.iniciar(`${modoLabel} — Corrigindo...`, etapas, modo === 'scanner' ? '🖨️' : '📱');
 
     try {
         progressManager.atualizarEtapa(0); await sleep(500);
@@ -277,7 +278,7 @@ async function processarComIA(imagemBase64) {
         const aluno = await buscarAluno(alunoId);
         if (!aluno) throw new Error('Aluno não encontrado');
         progressManager.atualizarEtapa(2); await sleep(300);
-        const respostaIA = await enviarParaCorrecao(imagemEnvio, provaId, alunoId);
+        const respostaIA = await enviarParaCorrecao(imagemEnvio, provaId, alunoId, modo);
         if (respostaIA.erro) throw new Error(respostaIA.erro);
         progressManager.atualizarEtapa(3); await sleep(200);
         let respostasDetectadas = respostaIA.respostas_detectadas || [];
@@ -303,7 +304,6 @@ async function processarComIA(imagemBase64) {
                     statusMsg = isCorreto ? '✅ ACERTOU' : '❌ ERROU';
                 }
             } else if (resp === 'MULTIPLA') {
-                // ⚠️ Dupla marcação NUNCA é acerto
                 isMultipla = true;
                 isCorreto = false;
                 statusMsg = '⚠️ MÚLTIPLA MARCAÇÃO';
@@ -348,7 +348,9 @@ async function processarComIA(imagemBase64) {
             acertos: acertos, totalQuestoes: totalQuestoes, nota: nota,
             porcentagem: porcentagem, conceito: conceito, confiancas: confiancasNormalizadas,
             metodoUsado: metodoUsado, requerRevisao: respostaIA.requer_revisao_manual || false,
-            questoesSuspeitas: respostaIA.questoes_suspeitas || []
+            questoesSuspeitas: respostaIA.questoes_suspeitas || [],
+            tipoEntrada: respostaIA.tipo_entrada || modo,
+            modoUsado: modo
         });
         progressManager.atualizarEtapa(5); await sleep(200);
         progressManager.finalizar(`✅ Correção concluída! ${acertos}/${totalQuestoes} acertos — Nota: ${nota.toFixed(1)}`);
@@ -382,7 +384,7 @@ async function buscarAluno(alunoId) {
     }
 }
 
-async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
+async function enviarParaCorrecao(imagemBase64, provaId, alunoId, modo = 'foto') {
     try {
         const response = await apiFetch(`${API_URL}/api/corrigir`, {
             method: 'POST',
@@ -390,7 +392,8 @@ async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
             body: JSON.stringify({
                 imagem: imagemBase64,
                 prova_id: parseInt(provaId),
-                aluno_id: parseInt(alunoId)
+                aluno_id: parseInt(alunoId),
+                modo: modo  // ✨ 'foto' | 'scanner' | 'auto'
             })
         });
         if (!response.ok) {
@@ -400,7 +403,7 @@ async function enviarParaCorrecao(imagemBase64, provaId, alunoId) {
         const dados = await response.json();
         if (dados.erro) throw new Error(dados.erro);
         if (!dados.respostas_detectadas && !dados.questoes_status) {
-            throw new Error('A IA não conseguiu detectar as respostas. Tire uma foto mais nítida com boa iluminação.');
+            throw new Error('A IA não conseguiu detectar as respostas. Verifique a qualidade da imagem.');
         }
         return dados;
     } catch (e) {
@@ -2166,5 +2169,49 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+// ═══════════════════════════════════════════════════════════════════
+// ✨ NOVO: MODOS EXPLÍCITOS — Foto e Scanner
+// ═══════════════════════════════════════════════════════════════════
+function abrirArquivoFoto() {
+    const inp = document.getElementById('inp-arq-foto');
+    if (inp) { inp.value = ''; inp.click(); }
+}
+
+function processarArqFoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+        showToast('❌ Imagem muito grande (máx. 20MB)', 'error'); return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+        showToast('📱 Foto carregada (Modo Foto)!', 'ai');
+        ultimaImagem = e.target.result;
+        processarComIA(e.target.result, 'foto');
+        go('corrigir-ia');
+    };
+    reader.readAsDataURL(file);
+}
+
+function abrirArquivoScanner() {
+    const inp = document.getElementById('inp-arq-scanner');
+    if (inp) { inp.value = ''; inp.click(); }
+}
+
+function processarArqScanner(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 30 * 1024 * 1024) {
+        showToast('❌ Arquivo muito grande (máx. 30MB)', 'error'); return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+        showToast('🖨️ Arquivo escaneado carregado (Modo Scanner)!', 'ai');
+        ultimaImagem = e.target.result;
+        processarComIA(e.target.result, 'scanner');
+        go('corrigir-ia');
+    };
+    reader.readAsDataURL(file);
+}
 
 console.log('✅ js/correcao.js carregado (com MULTIPLA + modal Ver Cartão Original + Fluxo Contínuo + Classes CSS)');
