@@ -1,6 +1,6 @@
 // ============================================================
 // JS/RESULTADOS.JS — Dashboard, Resultados, Relatórios, Desempenho
-// Extraído de script.js — Corte 6
+// ⚠️ CORRIGIDO: exibe 'MULTIPLA MARCAÇÃO' no Desempenho
 // ============================================================
 
 // ═══ ESTADO DE DESEMPENHO ═══
@@ -988,8 +988,9 @@ function atualizarGraficoAcertosPorQuestao(dadosAgrupados, disciplinaSelecionada
 
                     const resp = q.resposta || '';
                     const gab = q.gabarito || '';
+                    const isMultipla = q.multipla || resp === 'MULTIPLA';
                     const isRespondida = resp && resp !== '' && resp !== '—' && resp !== '-';
-                    const isCorreta = isRespondida && resp.toUpperCase() === gab.toUpperCase();
+                    const isCorreta = isRespondida && !isMultipla && resp.toUpperCase() === gab.toUpperCase();
 
                     if (isCorreta || q.acertou === true || q.correta === true) { data.acertos++; totalAcertos++; }
                     else { data.erros++; totalErros++; }
@@ -1191,9 +1192,13 @@ async function gerarDesempenho() {
             const resp = (i < respostasAluno.length) ? (respostasAluno[i] || '') : '';
             const gab = (i < gabarito.length) ? (gabarito[i] || '') : '';
             const codigoBncc = (i < bncc.length) ? (bncc[i] || '') : '';
-            const isCorreto = resp && gab && resp.toUpperCase() === gab.toUpperCase();
+            const isMultipla = (resp === 'MULTIPLA');
+            const isCorreto = !isMultipla && resp && gab && resp.toUpperCase() === gab.toUpperCase();
             if (resp) { if (isCorreto) acertos++; else erros++; }
-            resultadoQuestoes.push({ numero: i + 1, resposta: resp || '—', gabarito: gab || '—', bncc: codigoBncc, acertou: isCorreto, respondida: !!resp });
+            resultadoQuestoes.push({
+                numero: i + 1, resposta: resp || '—', gabarito: gab || '—', bncc: codigoBncc,
+                acertou: isCorreto, respondida: !!resp, multipla: isMultipla
+            });
         }
 
         const isProducao = (disciplina === 'Produção de Texto');
@@ -1310,16 +1315,23 @@ async function gerarDesempenho() {
             grid.style.padding = '8px 4px';
             resultadoQuestoes.forEach(q => {
                 const div = document.createElement('div');
-                div.className = `questao-item ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}`;
+                const isMultipla = q.multipla || q.resposta === 'MULTIPLA';
+                div.className = `questao-item ${q.acertou ? 'acertou' : (isMultipla ? 'multipla' : (q.respondida ? 'errou' : ''))}`;
                 let bnccHtml = '';
                 if (q.bncc && q.bncc.trim() !== '') {
                     bnccHtml = `<div style="font-size:6px;color:#a78bfa;background:rgba(139,92,246,0.1);padding:0 4px;border-radius:4px;margin-top:2px;">BNCC: ${escapeHtml(q.bncc)}</div>`;
                 }
+                const respExibida = isMultipla ? '⚠️' : escapeHtml(q.resposta);
+                let statusTexto = '';
+                let statusClass = '';
+                if (q.acertou) { statusTexto = '✅ ACERTOU: ADQUIRIU HABILIDADE'; statusClass = 'acertou'; }
+                else if (isMultipla) { statusTexto = '⚠️ MÚLTIPLA MARCAÇÃO'; statusClass = 'multipla'; }
+                else if (q.respondida) { statusTexto = '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM'; statusClass = 'errou'; }
                 div.innerHTML = `
                     <div class="q-num">Q${q.numero}</div>
-                    <div class="q-resp">${escapeHtml(q.resposta)}</div>
+                    <div class="q-resp">${respExibida}</div>
                     <div class="q-gab">${escapeHtml(q.gabarito)}</div>
-                    <span class="q-status-text ${q.acertou ? 'acertou' : (q.respondida ? 'errou' : '')}">${q.acertou ? '✅ ACERTOU: ADQUIRIU HABILIDADE' : (q.respondida ? '❌ ERROU: RECOMPOSIÇÃO DE APRENDIZAGEM' : '')}</span>
+                    <span class="q-status-text ${statusClass}">${statusTexto}</span>
                     ${bnccHtml}
                 `;
                 grid.appendChild(div);
@@ -1390,7 +1402,7 @@ function limparFiltrosDesempenho() {
         if (notaResumoCard) notaResumoCard.remove();
     }
     const statsInternosLimpar = document.getElementById('disciplina-unica-stats');
-    if (statsInternosLimpos) statsInternosLimpos.style.display = 'flex';
+    if (statsInternosLimpar) statsInternosLimpar.style.display = 'flex';
     const legendaAcertosLimpar = document.getElementById('legenda-desempenho');
     if (legendaAcertosLimpar) legendaAcertosLimpar.style.display = 'flex';
     const legendaConceitosLimpar = document.getElementById('legenda-conceitos');
@@ -1527,4 +1539,4 @@ function carregarUserData() {
     } catch (e) { console.log('Erro ao carregar dados do usuário:', e); }
 }
 
-console.log('✅ js/resultados.js carregado');
+console.log('✅ js/resultados.js carregado (com suporte a MULTIPLA)');
