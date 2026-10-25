@@ -1,5 +1,9 @@
 # ============================================================
 # SERVICES/CORRECAO.PY — Orquestrador EvalBee + IA fallback
+# ⚠️ CORRIGIDO:
+#    - MULTIPLA MARCAÇÃO = errada
+#    - EM BRANCO = errada (não é "suspeita")
+#    - requer_revisao_manual só conta questões RESPONDIDAS com baixa conf.
 # ============================================================
 
 import logging
@@ -16,6 +20,74 @@ from services.ia_fallback import (
     openai_client,
 )
 from core.utils import calcular_resultado_correcao, erro_correcao
+
+
+def _questao_respondida(q):
+    """Compatível com questoes_status que tenha 'respondida' OU só 'resposta'."""
+    if 'respondida' in q:
+        return bool(q['respondida'])
+    resp = q.get('resposta', '')
+    return bool(resp and resp not in ('—', '-', ''))
+
+
+def _pos_processar_resultado(resultado):
+    """
+    Pós-processa o dict retornado por calcular_resultado_correcao:
+
+    1) MÚLTIPLA → marcada como errada, motivo explícito na UI
+    2) EM BRANCO → NÃO é "suspeita"; não dispara revisão manual
+    3) Recalcula confiança média ignorando questões em branco
+    4) Limpa questoes_suspeitas (remove em branco e múltiplas)
+    5) requer_revisao_manual só se ≥3 respondidas com confiança <70 E ≥30% delas
+    """
+    if not isinstance(resultado, dict):
+        return resultado
+
+    questoes_status = resultado.get('questoes_status', []) or []
+
+    # ── (1) MÚLTIPLA
+    for q in questoes_status:
+        if q.get('resposta') == 'MULTIPLA':
+            q['multipla'] = True
+            q['acertou'] = False
+            q['respondida'] = True
+            q['status'] = '⚠️ MÚLTIPLA MARCAÇÃO'
+            q['status_texto'] = '⚠️ MÚLTIPLA MARCAÇÃO: mais de uma bolha preenchida'
+
+    # ── (2)/(3)/(4) separar respondidas × em branco
+    respondidas = [q for q in questoes_status if _questao_respondida(q)]
+    respondidas_baixa = [
+        q for q in respondidas
+        if not q.get('multipla') and q.get('confianca', 100) < 70
+    ]
+
+    # Confiança média = só questões efetivamente respondidas
+    if respondidas:
+        confs = [q.get('confianca', 70) for q in respondidas]
+        resultado['confianca'] = round(sum(confs) / len(confs))
+    else:
+        # Ninguém respondeu nada: 100% de certeza que está tudo em branco
+        resultado['confianca'] = 100
+
+    # requer_revisao_manual só olha questões RESPONDIDAS com baixa confiança
+    total_resp = len(respondidas)
+    total_baixa = len(respondidas_baixa)
+    resultado['requer_revisao_manual'] = (
+        total_baixa >= 3 and total_resp > 0 and total_baixa >= total_resp * 0.3
+    )
+
+    # Limpa questoes_suspeitas
+    suspeitas_orig = resultado.get('questoes_suspeitas') or []
+    suspeitas_novas = []
+    for num in suspeitas_orig:
+        idx = num - 1
+        if 0 <= idx < len(questoes_status):
+            q = questoes_status[idx]
+            if _questao_respondida(q) and not q.get('multipla') and q.get('confianca', 100) < 70:
+                suspeitas_novas.append(num)
+    resultado['questoes_suspeitas'] = suspeitas_novas
+
+    return resultado
 
 
 def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, serie,
@@ -58,10 +130,11 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
         if not resultado_template:
             logging.warning("⚠️ EvalBee falhou. Tentando IA como fallback...")
             if OPENAI_AVAILABLE and openai_client is not None:
-                return corrigir_com_ia_fallback(
+                resultado_ia = corrigir_com_ia_fallback(
                     imagem_base64, padrao_gabarito, aluno_nome,
                     serie, tipo_questoes, disciplina, bncc
                 )
+                return _pos_processar_resultado(resultado_ia)
             return erro_correcao(
                 aluno_nome, serie, disciplina,
                 '❌ Não foi possível ler as respostas do cartão.\n\n'
@@ -77,10 +150,13 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
 
         conf_media = sum(confiancas) / len(confiancas) if confiancas else 0
         detectadas = sum(1 for r in respostas if r)
+        multiplas_detectadas = sum(1 for r in respostas if r == 'MULTIPLA')
 
         logging.info(f"📊 EvalBee: média={conf_media:.1f}% "
-                     f"detectadas={detectadas}/{total_questoes} respostas={respostas}")
+                     f"detectadas={detectadas}/{total_questoes} "
+                     f"múltiplas={multiplas_detectadas} respostas={respostas}")
 
+        # Se quase nada foi detectado (nem branco nem marcação), tenta IA
         if detectadas < total_questoes * 0.15:
             logging.warning(f"⚠️ Só {detectadas}/{total_questoes}. Tentando IA...")
             if OPENAI_AVAILABLE and openai_client is not None:
@@ -90,15 +166,16 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 )
                 if not resultado_ia.get('erro'):
                     resultado_ia['modo'] = 'ia_fallback'
-                    return resultado_ia
+                    return _pos_processar_resultado(resultado_ia)
             return erro_correcao(
                 aluno_nome, serie, disciplina,
                 f'Detectou só {detectadas}/{total_questoes}. '
                 'Tire foto mais clara, com os 4 marcadores visíveis.'
             )
 
-        # ── ⚠️ CORRIGIDO: excluir 'MULTIPLA' do check de "todas iguais"
-        nao_vazias = [r for r in respostas if r]
+        # Só considera "suspeito" se TODAS forem a MESMA letra válida
+        # ('MULTIPLA' repetido e '' repetido NÃO são suspeitos)
+        nao_vazias = [r for r in respostas if r and r != 'MULTIPLA']
         letras_validas = set(padrao_gabarito['alternativas'])
         todas_sao_mesma_letra = (
             len(nao_vazias) >= 3
@@ -114,7 +191,7 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
                 )
                 if not resultado_ia.get('erro'):
                     resultado_ia['modo'] = 'ia_fallback'
-                    return resultado_ia
+                    return _pos_processar_resultado(resultado_ia)
             return erro_correcao(
                 aluno_nome, serie, disciplina,
                 f'Todas as respostas "{nao_vazias[0]}" — impossível. '
@@ -126,25 +203,16 @@ def corrigir_com_gemini_com_padrao(imagem_base64, padrao_gabarito, aluno_nome, s
             disciplina, tipo_questoes, 'template_evalbee_v4',
             bncc=bncc, confiancas=confiancas
         )
-
-        # ── ⚠️ CORRIGIDO: pós-processa questões MÚLTIPLAS para a UI mostrar o motivo
-        for q in resultado.get('questoes_status', []):
-            if q.get('resposta') == 'MULTIPLA':
-                q['multipla'] = True
-                q['acertou'] = False
-                q['status'] = '⚠️ MÚLTIPLA MARCAÇÃO (questão anulada)'
-                q['status_texto'] = '⚠️ MÚLTIPLA MARCAÇÃO: mais de uma bolha preenchida'
-                q['respondida'] = True
-
-        return resultado
+        return _pos_processar_resultado(resultado)
 
     except Exception as e:
         logging.error(f"❌ Erro na correção: {e}")
         traceback.print_exc()
         if OPENAI_AVAILABLE and openai_client is not None:
             logging.warning("⚠️ Exceção no template. Tentando IA...")
-            return corrigir_com_ia_fallback(
+            resultado_ia = corrigir_com_ia_fallback(
                 imagem_base64, padrao_gabarito, aluno_nome,
                 serie, tipo_questoes, disciplina, bncc
             )
+            return _pos_processar_resultado(resultado_ia)
         return erro_correcao(aluno_nome, serie, disciplina, str(e))
