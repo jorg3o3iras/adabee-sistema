@@ -2,6 +2,7 @@
 // JS/IMPRESSAO.JS — PDFs, cartões resposta, impressões
 // Extraído de script.js — Corte 7
 // ✨ REESCRITO COM CABEÇALHO INSTITUCIONAL PADRONIZADO
+// ✅ CORRIGIDO: matriz de proficiência com divisória e espaçamento
 // ============================================================
 
 // ═══════════════════════════════════════════════════════════════
@@ -1035,6 +1036,7 @@ function gerarDocumentoProducao(data) {
 
 // ═══════════════════════════════════════════════════════════════
 // 📊 IMPRIMIR MATRIZ DE PROFICIÊNCIA
+// ✅ CORRIGIDO: divisória vertical + espaçamento + parser robusto do BNCC
 // ═══════════════════════════════════════════════════════════════
 function imprimirMatrizVisualizada() {
     const matriz = window.matrizVisualizando;
@@ -1047,26 +1049,47 @@ function imprimirMatrizVisualizada() {
     const disciplina = matriz.disciplina || '—';
     const nivel = matriz.nivel || '—';
 
-    const descritores = (matriz.descritores || []).map(d => ({
-        bncc: d.bncc || '',
-        descritor: d.descritor || d.descricao || ''
-    }));
+    // Regex para reconhecer códigos BNCC válidos (EF01LP04, EF12LP19, EF15LP18, EF01LP06, ...)
+    const regexBNCC = /^[A-Z]{2}\d{2}[A-Z]{2,}\d+$/;
 
+    // Normaliza cada descritor em 1..N linhas { bncc, descritor }
     const linhas = [];
-    descritores.forEach((d) => {
-        const bnccs = d.bncc.split(/\s*-\s*/).filter(b => b.trim() !== '');
-        if (bnccs.length > 1) {
-            bnccs.forEach(bncc => linhas.push({ bncc: bncc.trim(), descritor: d.descritor }));
-        } else {
-            linhas.push({ bncc: d.bncc, descritor: d.descritor });
+    (matriz.descritores || []).forEach(d => {
+        const bnccRaw      = (d.bncc || '').trim();
+        const descFallback = (d.descritor || d.descricao || '').trim();
+
+        if (!bnccRaw) {
+            linhas.push({ bncc: '—', descritor: descFallback || '—' });
+            return;
         }
+
+        const partes = bnccRaw.split(/\s*[-–]\s*/).map(p => p.trim()).filter(Boolean);
+
+        // Caso 1: múltiplos códigos BNCC separados por " - "  (ex: "EF01LP04 - EF01LP05")
+        if (partes.length > 1 && partes.every(p => regexBNCC.test(p))) {
+            partes.forEach(codigo => linhas.push({ bncc: codigo, descritor: descFallback || '—' }));
+            return;
+        }
+
+        // Caso 2: "CÓDIGO - DESCRIÇÃO"  (ex: "EF01LP04 - DISTINGUIR LETRAS...")
+        if (partes.length > 1 && regexBNCC.test(partes[0])) {
+            const codigo    = partes[0];
+            const descricao = descFallback || partes.slice(1).join(' - ');
+            linhas.push({ bncc: codigo, descritor: descricao || '—' });
+            return;
+        }
+
+        // Caso 3: só código (ou texto livre) — mantém como está
+        linhas.push({ bncc: bnccRaw, descritor: descFallback || '—' });
     });
 
-    const descritoresHTML = linhas.length > 0
+    const totalHabilidades = linhas.length;
+
+    const descritoresHTML = totalHabilidades > 0
         ? linhas.map((linha, idx) => `
-            <tr style="background:${idx % 2 === 0 ? '#fff' : '#f8fafc'};">
-                <td style="padding:10px 12px;font-weight:700;color:#8b5cf6;font-family:'Courier New',monospace;vertical-align:top;border-bottom:1px solid #e2e8f0;font-size:10px;">${escapeHtml(linha.bncc || '—')}</td>
-                <td style="padding:10px 12px;color:#1e293b;line-height:1.5;vertical-align:top;border-bottom:1px solid #e2e8f0;white-space:pre-wrap;font-size:10px;">${escapeHtml(linha.descritor || '—')}</td>
+            <tr class="matriz-row" style="background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                <td class="col-bncc">${escapeHtml(linha.bncc || '—')}</td>
+                <td class="col-descritor">${escapeHtml(linha.descritor || '—')}</td>
             </tr>
         `).join('')
         : '<tr><td colspan="2" style="padding:20px;text-align:center;color:#94a3b8;">Nenhuma habilidade cadastrada.</td></tr>';
@@ -1075,16 +1098,82 @@ function imprimirMatrizVisualizada() {
         <div class="item"><span class="label">📚 ANO</span><span class="value">${escapeHtml(ano)}</span></div>
         <div class="item"><span class="label">📖 DISCIPLINA</span><span class="value">${escapeHtml(disciplina)}</span></div>
         <div class="item"><span class="label">📊 NÍVEL</span><span class="value">${escapeHtml(nivel)}</span></div>
-        <div class="item"><span class="label">📋 HABILIDADES</span><span class="value">${linhas.length}</span></div>
+        <div class="item"><span class="label">📋 HABILIDADES</span><span class="value">${totalHabilidades}</span></div>
     `;
 
     const conteudo = `
-        <h3 style="font-size:13px;font-weight:800;margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">📋 Habilidades e Descritores</h3>
-        <table>
+        <style>
+            /* ══════ TABELA DA MATRIZ (só neste PDF) ══════ */
+            .matriz-table {
+                width: 100%;
+                border-collapse: collapse;
+                border: 1px solid #cbd5e1;
+                margin: 12px 0;
+                table-layout: fixed;
+            }
+            .matriz-table thead th {
+                background: #f1f5f9;
+                padding: 10px 12px;
+                text-align: left;
+                font-weight: 800;
+                color: #334155;
+                font-size: 9px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                border-bottom: 2px solid #94a3b8;
+            }
+            /* Coluna BNCC — 22% + linha divisória vertical */
+            .matriz-table thead th.th-bncc {
+                width: 22%;
+                border-right: 2px solid #94a3b8;
+            }
+            /* Coluna DESCRITORES — 78% + recuo extra à esquerda */
+            .matriz-table thead th.th-descritor {
+                width: 78%;
+                padding-left: 28px;
+            }
+            /* Células de dados */
+            .matriz-table td.col-bncc {
+                padding: 10px 12px;
+                font-weight: 700;
+                color: #6d28d9;
+                font-family: 'Courier New', monospace;
+                font-size: 10px;
+                vertical-align: top;
+                text-align: left;
+                border-right: 2px solid #cbd5e1;
+                border-bottom: 1px solid #e2e8f0;
+                word-break: break-word;
+            }
+            .matriz-table td.col-descritor {
+                padding: 10px 14px 10px 28px;   /* ← 28px à esquerda afasta do BNCC */
+                color: #1e293b;
+                font-size: 10px;
+                line-height: 1.6;
+                vertical-align: top;
+                text-align: left;
+                border-bottom: 1px solid #e2e8f0;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+            .matriz-row {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            @media print {
+                .matriz-table thead th,
+                .matriz-table td.col-bncc { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+        </style>
+
+        <h3 style="font-size:13px;font-weight:800;margin:16px 0 10px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">
+            📋 Habilidades e Descritores
+        </h3>
+        <table class="matriz-table">
             <thead>
                 <tr>
-                    <th style="width:25%;">📌 HABILIDADE BNCC</th>
-                    <th style="width:75%;text-align:left;">📝 DESCRITORES</th>
+                    <th class="th-bncc">📌 HABILIDADE BNCC</th>
+                    <th class="th-descritor">📝 DESCRITORES</th>
                 </tr>
             </thead>
             <tbody>${descritoresHTML}</tbody>
